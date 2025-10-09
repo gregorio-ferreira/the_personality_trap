@@ -196,12 +196,12 @@ Use the dataset responsibly and follow ethical guidelines when conducting AI bia
 
 ## 👥 Authors & Contact
 
-**Principal Investigator**: Gregorio Ferreira
+**Research groupr**: [AId4so](https://blogs.uoc.edu/aid4so/)
 
 For questions, collaboration inquiries, or issues:
 - **GitHub Issues**: Report bugs or request features
 - **GitHub Discussions**: General questions and research discussions
-- **Email**: [Your contact email for research inquiries]
+- **Email**: 
 
 ---
 
@@ -209,7 +209,6 @@ For questions, collaboration inquiries, or issues:
 
 We thank:
 - The open-source community for foundational tools (SQLModel, Pandas, Alembic, Typer)
-- [Funding sources and institutional support]
 - Reviewers and editors at ACM for valuable feedback
 
 ---
