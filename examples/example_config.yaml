@@ -1,0 +1,20 @@
+# Example configuration file for the personas backend
+# Copy this file to ~/.yaml and fill in your credentials
+
+openai:
+  api-key: "your-openai-api-key-here"
+  api-key-pain-narratives: "your-openai-api-key-for-pain-narratives-here"
+  org-id: "your-openai-org-id-here"
+
+bedrock:
+  aws-credentials: ""
+  aws-access-key: "your-aws-access-key-here"
+  aws-secret-key: "your-aws-secret-key-here"
+  aws-region: "us-east-1"
+
+pg:
+  password: "your-postgres-password"
+  host: "localhost"
+  database: "personas"
+  user: "personas"
+  port: 5432

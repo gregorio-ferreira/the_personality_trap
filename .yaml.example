@@ -1,0 +1,47 @@
+############################################################
+# Personas Backend Configuration Example (.yaml.example)
+#
+# Copy to ./.yaml (or ~/.yaml depending on your setup). DO NOT COMMIT REAL SECRETS.
+# Any key can be overridden by an environment variable using:
+#   PERSONAS_<SECTION>__<KEY>  (double underscore)
+# Example: PERSONAS_OPENAI__API_KEY overrides openai.api_key
+#
+# The sections below reflect the current configuration structure used by the codebase.
+############################################################
+
+openai:
+  # Main OpenAI API key (required for GPT family models)
+  api_key: "YOUR_OPENAI_API_KEY"
+  # Optional second key if isolating a cost center / throttling
+  api_key_pain_narratives: "YOUR_OPTIONAL_SECOND_OPENAI_KEY"
+  # Optional org id
+  org_id: "YOUR_OPENAI_ORG_ID"
+
+bedrock:
+  # Provide EITHER aws_credentials profile OR access/secret key pair
+  aws_credentials: "your-profile-name"  # e.g., default or research-profile
+  aws_access_key: "AWS_ACCESS_KEY_ID"
+  aws_secret_key: "AWS_SECRET_ACCESS_KEY"
+  aws_region: "eu-central-1"  # region where models (Claude/Llama) are accessible
+
+pg:
+  # Connection info for PostgreSQL (migrations & data persistence)
+  host: "localhost"
+  port: 5432
+  database: "personas"
+  user: "personas"
+  password: "CHANGE_ME"   # Prefer env overrides for real deployments
+
+schema:
+  # Database schema configuration
+  default_schema: "personality_trap"   # production/default schema
+  target_schema: "your_target_schema"  # optional experimental/testing schema
+
+############################################################
+# Environment Variable Override Examples
+#   export PERSONAS_OPENAI__API_KEY="sk-..."
+#   export PERSONAS_PG__HOST="prod-db.example.com"
+#   export PERSONAS_BEDROCK__AWS_REGION="us-east-1"
+#   export PERSONAS_SCHEMA__TARGET_SCHEMA="experiment_123"
+# These will override the matching keys at runtime.
+############################################################

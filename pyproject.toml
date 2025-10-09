@@ -1,0 +1,89 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "personas-backend"
+version = "0.1.0"
+description = "Backend services for personas generation and evaluation"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {file = "LICENSE"}
+dependencies = [
+    "pingouin",
+    "pandas",
+    "sqlalchemy",
+    "sqlmodel",
+    "alembic",
+    "numpy",
+    "openai",
+    "boto3",
+    "pyyaml",
+    "gitpython",
+    "tenacity",
+    "psycopg2-binary",
+    "json-repair",
+    "openpyxl",
+    "tiktoken",
+    "typer",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "isort",
+    "mypy",
+    "ruff",
+    "pre-commit",
+    "types-PyYAML",
+]
+notebooks = [
+    "jupyter",
+    "ipykernel",
+    "notebook",
+]
+
+# Add this correct configuration
+[tool.hatch.build.targets.wheel]
+packages = ["src/personas_backend", "src/evaluations"]
+
+[tool.black]
+line-length = 100
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [
+    "**/*.ipynb",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = [
+    "E501", "B018", "E712", "F841", "B007", "E402", "B904", "F403", "F405"
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+ignore_missing_imports = true
+strict_optional = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
