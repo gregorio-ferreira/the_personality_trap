@@ -343,9 +343,9 @@ For comprehensive verification, see [`RESTORATION_VERIFICATION.md`](./RESTORATIO
    ```
 
 4. **Generate new personas (optional):**
-   ```bash
-   uv run python tools/pipeline.py generate-personas --model gpt4o --count 100
-   ```
+   - Open `examples/personas_generation.ipynb` in Jupyter
+   - Configure the desired model and population
+   - Run the notebook cells to generate new personas
 
 For full usage documentation, see [`USAGE.md`](./USAGE.md).
 

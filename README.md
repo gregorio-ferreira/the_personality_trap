@@ -597,7 +597,6 @@ Run `make help` to see all available targets.
 - Repository classes under `db/repositories/` handle persistence for experiment groups, experiment registrations, and request metadata.
 - LLM access wrappers (`models_providers/openai_client.py`, `models_providers/aws_bedrock_client.py`) expose a consistent API for persona generation.
 - `evaluate_questionnaire/runner.py` replays questionnaires against generated personas in parallel batches, writing results to `eval_questionnaires`.
-- `tools/pipeline.py` offers a Typer CLI that mirrors the published workflow.
 
 ### `evaluations`
 
@@ -646,13 +645,10 @@ Refer to [`dataset_description.md`](dataset_description.md) for column-level det
 
 - `make test` runs the pytest suite (no external API calls).
 - `make status` checks Docker, migrations, configuration, and outstanding Alembic revisions.
-- After restoring the dataset, re-run a sample evaluation to confirm everything is wired correctly:
-
-  ```bash
-  # Registers and executes a fresh evaluation run (adjust options as needed)
-  uv run python tools/pipeline.py run-evals --population spain826 --model gpt4o
-  uv run python tools/pipeline.py analyze
-  ```
+- After restoring the dataset, you can verify everything works by running the evaluation notebooks in `examples/`:
+  - `evaluations_table1-3.ipynb` – Verify demographic analysis loads correctly
+  - `evaluations_table4.ipynb` – Verify personality scoring calculations
+  - `questionnaires_experiments.ipynb` – Test questionnaire administration (requires API keys)
 
 ---
 

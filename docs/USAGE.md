@@ -1,7 +1,7 @@
 # Usage & Replication Guide
 
 This document walks through the full workflow required to reproduce the experiments described in **The Personality Trap**.
-Follow the steps below to provision the environment, populate the database, and execute the Typer-based research pipeline.
+Follow the steps below to provision the environment, populate the database, and execute the research workflow using Jupyter notebooks.
 
 ## 1. Install System Dependencies
 
@@ -46,84 +46,145 @@ Choose one of the following approaches:
   make db-upgrade
   ```
 
-## 4. Explore the Pipeline CLI
+## 4. Run the Research Workflow via Notebooks
 
-The research workflow is orchestrated via `tools/pipeline.py`, built on top of [Typer](https://typer.tiangolo.com/). The CLI is
-organized into subcommands that mirror the pipeline stages:
+The research workflow is orchestrated through Jupyter notebooks in the `examples/` directory. These notebooks provide an interactive, 
+step-by-step guide through the complete research pipeline.
 
-| Command | Purpose |
-| --- | --- |
-| `uv run python tools/pipeline.py init-db` | Create administrative tables and default schema entries. |
-| `uv run python tools/pipeline.py seed-ref-pop` | Seed the baseline reference population (826 questionnaires). |
-| `uv run python tools/pipeline.py generate-personas` | Generate AI personas using configured LLM providers. |
-| `uv run python tools/pipeline.py register-experiments` | Register experimental configurations for questionnaire runs. |
-| `uv run python tools/pipeline.py run-experiments` | Execute questionnaires against generated personas. |
-| `uv run python tools/pipeline.py run-evals` | Produce evaluation outputs for downstream analysis. |
-| `uv run python tools/pipeline.py analyze` | Generate summary statistics reproduced in the paper. |
-
-List the available options for any subcommand with `--help`:
+### Launch Jupyter
 
 ```bash
-uv run python tools/pipeline.py generate-personas --help
+# Install Jupyter dependencies
+uv sync --extra notebooks
+
+# Start Jupyter notebook server
+jupyter notebook examples/
 ```
+
+### Notebook Workflow
+
+| Notebook | Purpose |
+| --- | --- |
+| `personas_generation.ipynb` | Generate AI personas using LLM providers (GPT, Claude, Llama) |
+| `questionnaires_experiments.ipynb` | Administer personality questionnaires to generated personas |
+| `evaluations_table1-3.ipynb` | Reproduce demographic analysis (Tables 1-3 from the paper) |
+| `evaluations_table4.ipynb` | Reproduce personality scoring (Table 4) |
+| `evaluations_table6.ipynb` | Reproduce reliability analysis (Table 6) |
+| `evaluations_table_appendix_A4_A5.ipynb` | Reproduce reliability metrics (Appendix Tables A4-A5) |
+| `evaluations_table_appendix_A6_A7.ipynb` | Reproduce accuracy metrics (Appendix Tables A6-A7) |
+
+See [`examples/README.md`](../examples/README.md) for detailed notebook documentation.
 
 ## 5. End-to-End Replication Recipe
 
-The following script recreates the results submitted with the paper once the database is restored:
+After restoring the database, verify the research results by running the evaluation notebooks in sequence:
 
 ```bash
-# 1. Verify schema
-uv run python scripts/manage_schemas.py list
+# Launch Jupyter
+jupyter notebook examples/
 
-# 2. Re-run evaluation pipeline to recompute metrics
-uv run python tools/pipeline.py run-evals --population spain826 --model gpt4o
-
-# 3. Produce the public report artefacts
-uv run python tools/pipeline.py analyze
+# Then open and run:
+# 1. evaluations_table1-3.ipynb - Demographic analysis
+# 2. evaluations_table4.ipynb - Personality scoring
+# 3. evaluations_table6.ipynb - Reliability analysis
+# 4. evaluations_table_appendix_A4_A5.ipynb - Extended reliability
+# 5. evaluations_table_appendix_A6_A7.ipynb - Accuracy metrics
 ```
 
-Repeat the `run-evals` invocation for each population/model combination you restored. Set `PERSONAS_TARGET_SCHEMA` before running these commands when working outside the default schema.
+Each notebook loads data from the database and reproduces the corresponding analysis from the paper.
 
-## 6. Running Ad-Hoc Experiments
+## 6. Running New Experiments
+
+To generate new personas and run fresh experiments:
 
 1. **Create an isolated schema** for your experiment:
    ```bash
-   export PERSONAS_TARGET_SCHEMA=researcher_xyz
+   export PERSONAS_TARGET_SCHEMA=my_experiment
    make db-upgrade
    ```
-2. **Generate personas** with the desired model mix:
-   ```bash
-   uv run python tools/pipeline.py generate-personas --run-id researcher_xyz --models gpt4o claude35sonnet
-   ```
-3. **Register questionnaire experiments** and note the emitted group ID(s):
-   ```bash
-   uv run python tools/pipeline.py register-experiments --population spain826 --model gpt4o
-   ```
-4. **Execute questionnaires** for the registered groups:
-   ```bash
-   uv run python tools/pipeline.py run-experiments --group-id <GROUP_ID_FROM_STEP_3>
-   ```
-5. **Evaluate and analyze** the results:
-   ```bash
-   uv run python tools/pipeline.py run-evals --experiment-group-id <GROUP_ID_FROM_STEP_3> --skip-registration
-   uv run python tools/pipeline.py analyze
-   ```
 
-Set `PERSONAS_TARGET_SCHEMA` before each command if you are working outside the default schema. Use `--no-db` with persona generation when you want CSV artifacts instead of database writes.
+2. **Open and run** `examples/personas_generation.ipynb`:
+   - Configure models (GPT-4o, Claude, Llama, etc.)
+   - Set number of personas to generate
+   - Choose experimental conditions (baseline, borderline, etc.)
+   - Execute cells to generate personas
 
-## 7. Data Exports & Reuse
+3. **Open and run** `examples/questionnaires_experiments.ipynb`:
+   - Register experiments for your generated personas
+   - Configure questionnaire type (Big Five, EPQR-A)
+   - Execute cells to run questionnaires via LLM APIs
+   - Results are stored in the database automatically
 
-- Add `--no-db` to persona or questionnaire commands to emit CSV artifacts under `artifacts/outputs/`.
-- Execute `uv run python evaluations/population_analysis_comparissons.py` to generate CSV summaries referenced in the paper.
-- For notebook-driven exploration, install the `notebooks` extra (`uv sync --extra notebooks`) and open `evaluations/*.ipynb`.
+4. **Analyze results** using the evaluation notebooks:
+   - Modify notebook parameters to point to your experimental schema
+   - Run analysis cells to generate custom tables and visualizations
 
-## 8. Troubleshooting Checklist
+## 7. Using the Python API Directly
+
+For advanced use cases, you can import and use the packages programmatically:
+
+```python
+from personas_backend.evaluate_questionnaire import (
+    register_questionnaire_experiments,
+    run_pending_experiments
+)
+
+# Register experiments
+group_id, exp_ids = register_questionnaire_experiments(
+    questionnaire="bigfive",
+    model="gpt4o",
+    populations=["generated_gpt4o_spain826"],
+    schema="personality_trap"
+)
+
+# Execute experiments
+run_pending_experiments(
+    experiments_group_ids=[group_id],
+    max_workers=3,
+    schema="personality_trap"
+)
+```
+
+See the notebooks for complete examples.
+
+## 8. Data Exports & Analysis
+
+The evaluation notebooks automatically generate:
+- CSV exports of all analysis tables
+- Statistical summaries and comparisons
+- Visualization charts (where applicable)
+
+For custom analysis, you can also use the `evaluations` package directly:
+
+```python
+from evaluations import data_access, table_demographics
+from sqlalchemy import create_engine
+
+engine = create_engine("postgresql://user:pass@host/db")
+population_df = data_access.load_population(
+    conn=engine,
+    schema="personality_trap",
+    table="personas"
+)
+
+# Generate custom demographics table
+table_1 = table_demographics.build_demographics_table(
+    population_df=population_df,
+    models=["GPT-4o"],
+    conditions=["Base"]
+)
+```
+
+## 9. Troubleshooting Checklist
 
 | Issue | Suggested Fix |
 | --- | --- |
-| CLI reports missing credentials | Confirm `config.yaml` values or re-export the `PERSONAS_*` environment variables. |
-| Persona generation fails with API quota errors | Reduce `--count`, rotate providers, or schedule during off-peak hours. |
-| `psycopg2` import errors | Install PostgreSQL client headers (`sudo apt-get install libpq-dev`). |
-| Analysis output is empty | Ensure `run-evals` completed successfully and that you selected the correct schema/run identifiers. |
+| Jupyter kernel not found | Run `make jupyter-setup` to configure the kernel |
+| Missing credentials errors | Confirm `config.yaml` values or re-export the `PERSONAS_*` environment variables |
+| Persona generation fails with API quota errors | Reduce number of personas, rotate providers, or schedule during off-peak hours |
+| `psycopg2` import errors | Install PostgreSQL client headers (`sudo apt-get install libpq-dev`) |
+| Analysis output is empty | Ensure questionnaire experiments completed successfully and you selected the correct schema |
+| Database connection errors | Verify PostgreSQL is running (`make db-status`) and credentials are correct |
 
 For complete dataset documentation, refer to [`../dataset_description.md`](../dataset_description.md).
+

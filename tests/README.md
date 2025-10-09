@@ -38,9 +38,6 @@ make test-fast
 - `test_persona_generation_modes.py` - Persona generation logic
 - `test_persona_generation_utils.py` - Helper utilities for persona generation
 
-### CLI Tests
-- `test_pipeline_cli.py` - Command-line interface functionality
-
 ### Documentation Tests
 - `test_readme_links.py` - Validates all links in README.md point to existing files
 

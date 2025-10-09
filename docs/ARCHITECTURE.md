@@ -1,14 +1,14 @@
-# Experiments Runner & Evaluation Migration Report
+# Experiments Runner & Evaluation Architecture
 
-This document summarises the backend migration that aligned the questionnaire
-experiment flow with the new `personality_trap` schema and describes how to
-operate, troubleshoot, and extend the implementation.  It supersedes the legacy
+This document summarises the backend architecture for the questionnaire
+experiment flow within the `personality_trap` schema and describes how to
+operate, troubleshoot, and extend the implementation. It supersedes the legacy
 scripts under `experiments_original/` and should be used as the canonical
 reference when running research experiments.
 
 ## 1. High-level architecture
 
-The updated flow has three cooperating layers:
+The experiment workflow has two cooperating layers:
 
 1. **Registration** – selects personas for a given model/population, builds the
    experiment group metadata, and inserts one row per persona repetition into
@@ -17,14 +17,15 @@ The updated flow has three cooperating layers:
    impersonates personas via the configured model wrapper, persists the answers
    to `personality_trap.eval_questionnaires`, and marks the experiment as
    succeeded (`src/personas_backend/evaluate_questionnaire/runner.py`).
-3. **CLI Orchestration** – exposes Typer commands that combine registration and
-   execution (`tools/pipeline.py`).  The CLI now mirrors the original automation
-   scripts while supporting dry-run and batching capabilities.
 
 All components rely on the SQLModel models defined in
-`src/personas_backend/db/models.py`.  The previous "parsed_answers" columns,
+`src/personas_backend/db/models.py`. The previous "parsed_answers" columns,
 `answered_questionnaires` table, and CSV shims have been removed or replaced by
 helpers that match the current schema.
+
+**Notebook-driven workflow**: The Jupyter notebooks in `examples/` provide an interactive
+interface to the registration and execution layers, allowing researchers to configure,
+run, and analyze experiments step-by-step.
 
 ## 2. Database integration updates
 
@@ -113,41 +114,31 @@ Key optional arguments:
 Errors during execution are logged and do not halt other experiments; failed
 runs remain with `succeeded=NULL` for later re-processing.
 
-## 5. Typer CLI commands
+## 5. Notebook workflow
 
-`tools/pipeline.py` exposes a cohesive CLI for end-to-end operations:
+The research workflow is orchestrated through Jupyter notebooks in the `examples/` directory:
 
-* `register-experiments` – registers questionnaire runs for selected models and
-  populations.  Supports `--dry-run`, `--max-personas`, `--max-repetitions`, and
-  custom descriptions.
-* `run-experiments` – processes pending experiments, optionally constrained to
-  specific groups or batch sizes.  `--dry-run` prints the intended scope without
-  contacting model providers.
-* `run-evals` – convenience command that registers experiments (unless
-  `--skip-registration` is set) and immediately executes them.  This command is a
-  drop-in replacement for the historic pipeline entry point.
+* **`personas_generation.ipynb`** – Demonstrates persona generation using LLM providers
+  with configurable models, populations, and experimental conditions.
+* **`questionnaires_experiments.ipynb`** – Shows the complete experiment registration
+  and execution flow:
+  1. Loads configuration and utility helpers
+  2. Selects personas by model/population combination
+  3. Registers experiment groups for each questionnaire
+  4. Runs pending experiments through the runner
+  5. Displays summaries of `experiments_list` and `eval_questionnaires` to verify results
 
-The existing commands (`init-db`, `seed-ref-pop`, `generate-personas`, `analyze`)
-remain available.  See `docs/USAGE.md` for quick examples.
+* **Evaluation notebooks** (`evaluations_table*.ipynb`) – Load experimental results
+  from the database and reproduce all analysis tables from the paper.
 
-## 6. Notebook validation
+These notebooks provide an interactive, step-by-step interface to the registration
+and execution layers, making them ideal for exploration, validation, and custom analyses.
 
-`examples/questionnaires_evaluation.ipynb` demonstrates the new workflow end to
-end:
+See `examples/README.md` for detailed notebook documentation.
 
-1. Loads configuration and utility helpers.
-2. Selects two personas per model/population combination.
-3. Registers a fresh experiment group for each questionnaire.
-4. Runs the pending experiments through the runner.
-5. Displays summaries of `experiments_list` and `eval_questionnaires` to verify
-   stored answers.
+## 6. Automated tests
 
-This notebook mirrors the persona-generation example and is intended for manual
-QA or demos.
-
-## 7. Automated tests
-
-The following pytest suites cover the new functionality:
+The following pytest suites cover the core functionality:
 
 * `tests/test_evaluate_registration.py` – validates persona selection,
   experiment group creation, and repetition handling using in-memory SQLModel
@@ -156,45 +147,43 @@ The following pytest suites cover the new functionality:
   wrapper to produce deterministic responses and asserting that experiments are
   marked succeeded, request metadata is stored, and answers land in
   `eval_questionnaires`.
-* `tests/test_pipeline_cli.py` – uses Typer's CLI runner to ensure command-line
-  argument wiring, dry-run paths, and error handling behave as expected.
 * Supporting fixtures in `tests/conftest.py` spin up an in-memory database that
   mirrors the relevant `personality_trap` tables.
 
 When developing locally run:
 
 ```bash
-uv run pytest tests/test_evaluate_registration.py tests/test_evaluate_runner.py tests/test_pipeline_cli.py
+uv run pytest tests/test_evaluate_registration.py tests/test_evaluate_runner.py
 ```
 
 to focus on the critical paths.
 
-## 8. Troubleshooting tips
+## 7. Troubleshooting tips
 
 * **No pending experiments found** – ensure that registration succeeded and the
-  relevant rows in `experiments_list` still have `succeeded=NULL`.  Use
-  `tools/pipeline.py register-experiments --dry-run` to confirm persona counts.
+  relevant rows in `experiments_list` still have `succeeded=NULL`. Check the notebook
+  output or database directly to confirm experiment registration.
 * **Persona lookup warnings** – `_resolve_persona` logs a warning when it cannot
-  find a matching persona.  Verify the persona exists with the specified model
+  find a matching persona. Verify the persona exists with the specified model
   and population and that `personality_id` matches either `id` or
   `ref_personality_id`.
 * **Schema mismatches** – the repositories expect the tables declared in
-  `src/personas_backend/db/models.py`.  Run the Alembic migrations or consult
-  `DATABASE_RELEASE_NOTES.md` if the database is missing columns.
+  `src/personas_backend/db/models.py`. Run the Alembic migrations (`make db-upgrade`)
+  if the database is missing columns.
 * **Re-running experiments** – the runner clears existing rows from
   `eval_questionnaires` before invoking the questionnaire handler, so repeated
   runs will overwrite previous answers while preserving request metadata
   history.
 
-## 9. Next steps
+## 8. Next steps
 
 Potential follow-up enhancements:
 
 * Add progress reporting/metrics for long-running experiment batches.
-* Implement configurable backoff/ retry policies per model provider in the
+* Implement configurable backoff/retry policies per model provider in the
   runner (currently inherited from `QuestionnaireBase`).
-* Extend the notebook to include exploratory analysis of the collected answers
-  (e.g. scoring, visualisations).
+* Extend the notebooks to include more exploratory analysis of the collected answers
+  (e.g. scoring, visualizations).
 * Integrate experiment registration with persona-generation outputs to support
   fully automated end-to-end pipelines.
 
