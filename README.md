@@ -205,7 +205,7 @@ MIT License. See `LICENSE`.
 
 ## 👥 Authors & Contact
 
-**Principal Investigator:** Gregorio Ferreira
+**Principal Investigator:**
 Contact: [Your contact email for research inquiries]
 
 ---
