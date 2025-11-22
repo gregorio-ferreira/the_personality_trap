@@ -307,9 +307,11 @@ and statements as values.
                 query = f"""
                 SELECT question_number, answer
                 FROM {self.schema}.eval_questionnaires
-                WHERE experiment_id = {experiment_id}
+                WHERE experiment_id = :experiment_id
                 """
-                exp_df = pd.read_sql_query(query, self.db_conn)
+                exp_df = pd.read_sql_query(
+                    query, self.db_conn, params={"experiment_id": experiment_id}
+                )
 
                 if exp_df.empty:
                     self.logger.warning(f"No answers found for experiment {experiment_id}")

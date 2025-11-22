@@ -24,6 +24,11 @@ class DatabaseMaintenanceHandler:
 
     This class provides functions to perform various database maintenance tasks
     such as deleting records, cleaning up old data, and optimizing database performance.
+
+    NOTE: These operations are intended for **administrative use only**.
+    Callers must ensure inputs are trusted, as they operate directly against
+    the database. Identifier inputs (schema/table/column) are validated to
+    reduce injection risk; filter values must be passed as bound parameters.
     """
 
     def __init__(
@@ -42,6 +47,18 @@ class DatabaseMaintenanceHandler:
         self.logger = logger or logging.getLogger(__name__)
         self.db_handler = db_handler or DatabaseHandler(logger=self.logger)
         self.connection = self.db_handler.connection
+
+    @staticmethod
+    def _validate_identifier(value: str, *, kind: str) -> str:
+        """Validate simple SQL identifiers (schema/table/column)."""
+
+        if (
+            not value
+            or not value.replace("_", "").isalnum()
+            or not (value[0].isalpha() or value[0] == "_")
+        ):
+            raise ValueError(f"Invalid {kind} name: {value}")
+        return value
 
     def execute_delete(
         self,
@@ -62,10 +79,15 @@ class DatabaseMaintenanceHandler:
         Returns:
             int: Number of deleted rows
         """
+        schema_safe = self._validate_identifier(schema, kind="schema")
+        table_safe = self._validate_identifier(table_name, kind="table")
         if parameters is None:
             parameters = {}
 
-        full_table_name = f"{schema}.{table_name}"
+        full_table_name = f"{schema_safe}.{table_safe}"
+        if not where_clause.strip():
+            raise ValueError("where_clause must not be empty")
+
         sql = text(f"DELETE FROM {full_table_name} WHERE {where_clause}")
 
         try:
@@ -94,7 +116,9 @@ class DatabaseMaintenanceHandler:
             table_name (str): Name of the table to truncate
             schema (str): Database schema name
         """
-        full_table_name = f"{schema}.{table_name}"
+        schema_safe = self._validate_identifier(schema, kind="schema")
+        table_safe = self._validate_identifier(table_name, kind="table")
+        full_table_name = f"{schema_safe}.{table_safe}"
         sql = text(f"TRUNCATE TABLE {full_table_name}")
 
         try:
@@ -131,8 +155,16 @@ class DatabaseMaintenanceHandler:
         Returns:
             int: Number of deleted rows
         """
-        where_clause = f"{date_column} < NOW() - INTERVAL '{days_old} days'"
-        return self.execute_delete(table_name, schema, where_clause, parameters)
+        schema_safe = self._validate_identifier(schema, kind="schema")
+        table_safe = self._validate_identifier(table_name, kind="table")
+        column_safe = self._validate_identifier(date_column, kind="column")
+        if days_old <= 0:
+            raise ValueError("days_old must be positive")
+        where_clause = f"{column_safe} < NOW() - (:days_old || ' days')::interval"
+        params = {"days_old": days_old}
+        if parameters:
+            params.update(parameters)
+        return self.execute_delete(table_safe, schema_safe, where_clause, params)
 
     def delete_by_foreign_key(
         self,
@@ -155,16 +187,23 @@ class DatabaseMaintenanceHandler:
         Returns:
             int: Number of deleted rows
         """
+        schema_safe = self._validate_identifier(schema, kind="schema")
+        table_safe = self._validate_identifier(table_name, kind="table")
+        column_safe = self._validate_identifier(foreign_key_column, kind="column")
         if parameters is None:
             parameters = {}
 
         if isinstance(foreign_key_value, list):
-            foreign_keys_str = ", ".join([str(v) for v in foreign_key_value])
-            where_clause = f"{foreign_key_column} IN ({foreign_keys_str})"
+            if not foreign_key_value:
+                return 0
+            placeholders = ", ".join([f":fk_{i}" for i in range(len(foreign_key_value))])
+            where_clause = f"{column_safe} IN ({placeholders})"
+            parameters.update({f"fk_{i}": v for i, v in enumerate(foreign_key_value)})
         else:
-            where_clause = f"{foreign_key_column} = {foreign_key_value}"
+            where_clause = f"{column_safe} = :fk_single"
+            parameters["fk_single"] = foreign_key_value
 
-        return self.execute_delete(table_name, schema, where_clause, parameters)
+        return self.execute_delete(table_safe, schema_safe, where_clause, parameters)
 
     def vacuum_table(self, table_name: str, schema: str, full: bool = False) -> None:
         """
@@ -175,9 +214,13 @@ class DatabaseMaintenanceHandler:
             schema (str): Database schema name
             full (bool, optional): Whether to run VACUUM FULL. Defaults to False.
         """
-        full_table_name = f"{schema}.{table_name}"
+        schema_safe = self._validate_identifier(schema, kind="schema")
+        table_safe = self._validate_identifier(table_name, kind="table")
+        full_table_name = f"{schema_safe}.{table_safe}"
         vacuum_type = "FULL" if full else ""
-        vacuum_cmd = f"VACUUM {vacuum_type} {full_table_name}"
+        if vacuum_type not in {"", "FULL"}:
+            raise ValueError("Invalid vacuum type")
+        vacuum_cmd = f"VACUUM {vacuum_type} {full_table_name}".strip()
 
         try:
             # VACUUM cannot be executed inside a transaction, so we need to:
@@ -327,7 +370,9 @@ class DatabaseMaintenanceHandler:
             table_name (str): Name of the table
             schema (str): Database schema name
         """
-        full_table_name = f"{schema}.{table_name}"
+        schema_safe = self._validate_identifier(schema, kind="schema")
+        table_safe = self._validate_identifier(table_name, kind="table")
+        full_table_name = f"{schema_safe}.{table_safe}"
         sql = text(f"ANALYZE {full_table_name}")
 
         try:

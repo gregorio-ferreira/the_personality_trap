@@ -328,10 +328,10 @@ For comprehensive verification, see [`RESTORATION_VERIFICATION.md`](./RESTORATIO
    ```bash
    # Connect to database
    docker exec -it personas_postgres psql -U personas -d personas
-   
+
    # List all tables
    \dt personality_trap.*
-   
+
    # Sample personas data
    SELECT id, age, gender, ethnicity, nationality FROM personality_trap.personas LIMIT 10;
    ```
@@ -343,9 +343,9 @@ For comprehensive verification, see [`RESTORATION_VERIFICATION.md`](./RESTORATIO
    ```
 
 4. **Generate new personas (optional):**
-   - Open `examples/personas_generation.ipynb` in Jupyter
-   - Configure the desired model and population
-   - Run the notebook cells to generate new personas
+   ```bash
+   uv run python tools/pipeline.py generate-personas --model gpt4o --count 100
+   ```
 
 For full usage documentation, see [`USAGE.md`](./USAGE.md).
 

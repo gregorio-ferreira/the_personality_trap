@@ -1,47 +1,32 @@
-############################################################
-# Personas Backend Configuration Example (.yaml.example)
+# Public-safe configuration template.
 #
-# Copy to ./.yaml (or ~/.yaml depending on your setup). DO NOT COMMIT REAL SECRETS.
-# Any key can be overridden by an environment variable using:
-#   PERSONAS_<SECTION>__<KEY>  (double underscore)
-# Example: PERSONAS_OPENAI__API_KEY overrides openai.api_key
+# Copy to `.yaml` and fill with your credentials:
+#   cp .yaml.example .yaml
+# Values can also be provided via environment variables using the pattern
+# PERSONAS_SECTION__KEY (double underscore), e.g.:
+#   export PERSONAS_OPENAI__API_KEY="sk-..."
+#   export PERSONAS_PG__PASSWORD="your-password"
 #
-# The sections below reflect the current configuration structure used by the codebase.
-############################################################
+# Never commit `.yaml` with real credentials.
 
 openai:
-  # Main OpenAI API key (required for GPT family models)
-  api_key: "YOUR_OPENAI_API_KEY"
-  # Optional second key if isolating a cost center / throttling
-  api_key_pain_narratives: "YOUR_OPTIONAL_SECOND_OPENAI_KEY"
-  # Optional org id
-  org_id: "YOUR_OPENAI_ORG_ID"
+  api-key: "sk-proj-REPLACE_WITH_YOUR_OPENAI_API_KEY"
+  api-key-pain-narratives: "sk-proj-REPLACE_WITH_SECONDARY_KEY_IF_NEEDED"
+  org-id: "org-REPLACE_WITH_YOUR_ORG_ID"
 
 bedrock:
-  # Provide EITHER aws_credentials profile OR access/secret key pair
-  aws_credentials: "your-profile-name"  # e.g., default or research-profile
-  aws_access_key: "AWS_ACCESS_KEY_ID"
-  aws_secret_key: "AWS_SECRET_ACCESS_KEY"
-  aws_region: "eu-central-1"  # region where models (Claude/Llama) are accessible
+  aws-credentials: "your-aws-profile-name"  # Optional named profile
+  aws-access-key: "AKIA_REPLACE_WITH_YOUR_AWS_ACCESS_KEY"
+  aws-secret-key: "REPLACE_WITH_YOUR_AWS_SECRET_KEY"
+  aws-region: "us-east-1"
 
 pg:
-  # Connection info for PostgreSQL (migrations & data persistence)
+  password: "your_secure_password"
   host: "localhost"
-  port: 5432
   database: "personas"
   user: "personas"
-  password: "CHANGE_ME"   # Prefer env overrides for real deployments
+  port: 5432
 
 schema:
-  # Database schema configuration
-  default_schema: "personality_trap"   # production/default schema
-  target_schema: "your_target_schema"  # optional experimental/testing schema
-
-############################################################
-# Environment Variable Override Examples
-#   export PERSONAS_OPENAI__API_KEY="sk-..."
-#   export PERSONAS_PG__HOST="prod-db.example.com"
-#   export PERSONAS_BEDROCK__AWS_REGION="us-east-1"
-#   export PERSONAS_SCHEMA__TARGET_SCHEMA="experiment_123"
-# These will override the matching keys at runtime.
-############################################################
+  default_schema: "personality_trap"
+  target_schema: "my_experiment"  # Optional isolated schema for experiments

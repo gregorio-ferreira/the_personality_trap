@@ -34,6 +34,13 @@ This directory contains detailed documentation for **The Personality Trap** rese
 - Testing approach and troubleshooting
 - **Best for:** Understanding the codebase internals or extending functionality
 
+**[`MULTI_SCHEMA_ALEMBIC.md`](MULTI_SCHEMA_ALEMBIC.md)** - Multi-schema database migrations
+- Using Alembic with multiple PostgreSQL schemas
+- Independent version tracking per schema
+- Testing and production isolation strategies
+- Configuration and usage examples
+- **Best for:** Working with multiple schemas or understanding migration architecture
+
 ## 🗂️ Other Documentation
 
 Documentation is distributed across the repository for easy access:
