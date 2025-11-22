@@ -58,6 +58,18 @@ class PendingExperiment:
     persona_payload: Dict[str, Any]
 
 
+def _validate_schema_name(schema: str) -> str:
+    """Ensure schema identifier is simple and SQL-safe."""
+
+    if (
+        not schema
+        or not schema.replace("_", "").isalnum()
+        or not (schema[0].isalpha() or schema[0] == "_")
+    ):
+        raise ValueError(f"Invalid schema: {schema}")
+    return schema
+
+
 def _persona_to_payload(persona: Persona) -> Dict[str, Any]:
     """Convert a ``Persona`` row into a JSON-serialisable dictionary."""
 
@@ -89,10 +101,12 @@ def _clear_existing_answers(
 ) -> None:
     """Remove previous questionnaire answers before re-processing."""
 
+    safe_schema = _validate_schema_name(schema)
     with engine.begin() as connection:
         connection.execute(
             text(
-                f"DELETE FROM {schema}.eval_questionnaires " "WHERE experiment_id = :experiment_id"
+                f"DELETE FROM {safe_schema}.eval_questionnaires "
+                "WHERE experiment_id = :experiment_id"
             ),
             {"experiment_id": experiment_id},
         )
@@ -149,6 +163,8 @@ def _load_pending_experiments_raw_sql(
 ) -> List[PendingExperiment]:
     """Fetch experiments with NULL success using raw SQL for schema support."""
 
+    safe_schema = _validate_schema_name(schema)
+
     # Build the query with schema-aware table references
     query = f"""
     SELECT
@@ -167,10 +183,10 @@ def _load_pending_experiments_raw_sql(
         p.ethnicity, p.religious_belief, p.occupation,
         p.political_orientation, p.location, p.description,
         p.word_count_description, p.repetitions
-    FROM {schema}.experiments_list el
-    JOIN {schema}.experiments_groups eg
+    FROM {safe_schema}.experiments_list el
+    JOIN {safe_schema}.experiments_groups eg
         ON el.experiments_group_id = eg.experiments_group_id
-    LEFT JOIN {schema}.personas p ON (
+    LEFT JOIN {safe_schema}.personas p ON (
         p.ref_personality_id = el.personality_id
         AND p.population = el.population
     )

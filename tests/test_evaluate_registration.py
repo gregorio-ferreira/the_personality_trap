@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pytest
-from sqlmodel import select
-
 from personas_backend.db.models import ExperimentsGroup, ExperimentsList, Persona
 from personas_backend.evaluate_questionnaire import registration
+from sqlmodel import select
 
 
 @dataclass
@@ -39,6 +38,7 @@ class RecordingExperimentGroupHandler:
         temperature: float,
         top_p: float,
         ii_repeated: int,
+        schema: Optional[str] = None,
     ) -> int:
         group_id = self._next_id
         self._next_id += 1
@@ -77,7 +77,9 @@ class RecordingExperimentHandler:
         self.calls: List[Dict[str, Any]] = []
         self._next_id = 1
 
-    def register_experiment(self, my_experiment: Dict[str, Any]) -> int:
+    def register_experiment(
+        self, my_experiment: Dict[str, Any], schema: Optional[str] = None
+    ) -> int:
         experiment_id = self._next_id
         self._next_id += 1
         payload = dict(my_experiment)

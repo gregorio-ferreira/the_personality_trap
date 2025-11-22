@@ -723,6 +723,15 @@ class PersonaGenerator:
         if not self.db_handler:
             raise ValueError("Database handler required for saving")
 
+        def _validate_identifier(identifier: str, kind: str) -> str:
+            if (
+                not identifier
+                or not identifier.replace("_", "").isalnum()
+                or not (identifier[0].isalpha() or identifier[0] == "_")
+            ):
+                raise ValueError(f"Invalid {kind} name: {identifier}")
+            return identifier
+
         try:
             # Extract persona data
             persona_data = persona_result["generated_persona"]
@@ -758,20 +767,25 @@ class PersonaGenerator:
                 record.update(additional_fields)
 
             # Create insert SQL
-            columns = list(record.keys())
+            columns = []
+            for col in record.keys():
+                columns.append(_validate_identifier(col, "column"))
             placeholders = [f":{col}" for col in columns]
 
-            insert_sql = f"""
-            INSERT INTO {schema}.{table} ({', '.join(columns)})
-            VALUES ({', '.join(placeholders)})
-            """
+            safe_schema = _validate_identifier(schema, "schema")
+            safe_table = _validate_identifier(table, "table")
+
+            insert_sql = text(
+                f"INSERT INTO {safe_schema}.{safe_table} "
+                f"({', '.join(columns)}) VALUES ({', '.join(placeholders)})"
+            )
 
             # Execute insert
             with self.db_handler.session() as session:
-                session.execute(text(insert_sql), record)
+                session.execute(insert_sql, record)
                 session.commit()
 
-            self.logger.info(f"Saved persona to {schema}.{table}")
+            self.logger.info(f"Saved persona to {safe_schema}.{safe_table}")
 
         except Exception as e:
             self.logger.error(f"Error saving persona to database: {e}")

@@ -34,6 +34,18 @@ class DatabaseHandler:
         self.config_manager = config_manager or ConfigManager(logger=self.logger)
         self.connection = self.connect_to_postgres()
 
+    @staticmethod
+    def _validate_identifier(identifier: str, *, kind: str) -> str:
+        """Ensure schema/table/view identifiers are simple SQL-safe tokens."""
+
+        if (
+            not identifier
+            or not identifier.replace("_", "").isalnum()
+            or not (identifier[0].isalpha() or identifier[0] == "_")
+        ):
+            raise ValueError(f"Invalid {kind}: {identifier}")
+        return identifier
+
     def connect_to_postgres(self, port: Optional[int] = None) -> sqlalchemy.engine.base.Engine:
         """Create a connection to the PostgreSQL database.
 
@@ -86,15 +98,19 @@ class DatabaseHandler:
         Returns:
             bool: True if table exists, False otherwise
         """
-        query = f"""
+        safe_schema = self._validate_identifier(table_schema, kind="schema")
+        safe_table = self._validate_identifier(table_name, kind="table")
+        query = text(
+            """
             SELECT EXISTS (
                 SELECT FROM information_schema.tables
-                WHERE  table_schema = '{table_schema}'
-                AND    table_name   = '{table_name}'
+                WHERE  table_schema = :schema
+                AND    table_name   = :table
             );
-        """
-        # Cast the pandas result to bool explicitly
-        return bool(pd.read_sql_query(query, self.connection).iloc[0, 0])
+            """
+        )
+        params = {"schema": safe_schema, "table": safe_table}
+        return bool(pd.read_sql_query(query, self.connection, params=params).iloc[0, 0])
 
     def refresh_materialized_view(self, schema: str, view_name: str) -> None:
         """
@@ -105,14 +121,16 @@ class DatabaseHandler:
             view_name (str): View name
         """
         try:
+            safe_schema = self._validate_identifier(schema, kind="schema")
+            safe_view = self._validate_identifier(view_name, kind="view")
             with self.connection.connect() as connection:
-                refresh_query = text(f"REFRESH MATERIALIZED VIEW {schema}.{view_name};")
+                refresh_query = text(f"REFRESH MATERIALIZED VIEW {safe_schema}.{safe_view};")
                 connection.execute(refresh_query)
                 connection.commit()
                 self.logger.info(
                     "Materialized view %s.%s refreshed successfully!",
-                    schema,
-                    view_name,
+                    safe_schema,
+                    safe_view,
                 )
         except SQLAlchemyError as e:
             self.logger.error(

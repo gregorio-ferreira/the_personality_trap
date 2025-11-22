@@ -104,6 +104,11 @@ test:
 	@echo "${GREEN}Running tests...${RESET}"
 	uv run pytest -v tests
 
+## Run tests with coverage
+test-cov:
+	@echo "${GREEN}Running tests with coverage...${RESET}"
+	uv run pytest --cov --cov-report=term --cov-report=html
+
 ## Run only configuration related tests
 test-config:
 	@echo "${GREEN}Running configuration tests...${RESET}"

@@ -31,6 +31,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "pytest-cov",
     "black",
     "isort",
     "mypy",
@@ -86,4 +87,26 @@ testpaths = ["tests"]
 addopts = "-q"
 filterwarnings = [
     "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["src/personas_backend", "src/evaluations"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.0.0",
 ]

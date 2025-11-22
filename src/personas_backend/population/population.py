@@ -1,7 +1,7 @@
 """Helpers to retrieve and persist population data in PostgreSQL."""
 
 import logging
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas as pd  # type: ignore
 import sqlalchemy  # type: ignore
@@ -32,6 +32,18 @@ class Population:
         self.db_handler = db_handler or DatabaseHandler(logger=self.logger)
         self.connection = self.db_handler.connection
 
+    @staticmethod
+    def _validate_identifier(identifier: str) -> str:
+        """Ensure schema/table/column names are simple SQL identifiers."""
+
+        if (
+            not identifier
+            or not identifier.replace("_", "").isalnum()
+            or not (identifier[0].isalpha() or identifier[0] == "_")
+        ):
+            raise ValueError(f"Invalid identifier: {identifier}")
+        return identifier
+
     def get_ref_population_data(
         self, population: str, schema: Optional[str] = None
     ) -> pd.DataFrame:
@@ -46,26 +58,27 @@ class Population:
         Returns:
             pd.DataFrame: Population data
         """
-        use_schema = schema or get_target_schema()
+        use_schema = self._validate_identifier(schema or get_target_schema())
         # Source of reference personas is the unified 'personas' table.
         # Map ref_personality_id -> persona_id for downstream compatibility.
-        query = f"""
-            SELECT
-                ref_personality_id AS persona_id,
-                gender,
-                age,
-                population,
-                description
+        query = sqlalchemy.text(
+            f"""
+            SELECT ref_personality_id AS persona_id,
+                   gender,
+                   age,
+                   population,
+                   description
             FROM {use_schema}.personas
-            WHERE population = '{population}'
+            WHERE population = :population
             ORDER BY persona_id
-        """
+            """
+        )
         self.logger.info(
             "Querying population data for %s from schema %s (personas)",
             population,
             use_schema,
         )
-        return pd.read_sql(query, self.connection)
+        return pd.read_sql(query, self.connection, params={"population": population})
 
     def get_baseline_population_data(
         self,
@@ -81,19 +94,21 @@ class Population:
         Returns:
             pd.DataFrame: Population data
         """
-        query = f"""
-            SELECT
-                ref_personality_id AS persona_id,
-                gender,
-                age,
-                population,
-                description
-            FROM population.{table_name}
-            WHERE population = '{population}'
+        safe_table = self._validate_identifier(table_name)
+        query = sqlalchemy.text(
+            f"""
+            SELECT ref_personality_id AS persona_id,
+                   gender,
+                   age,
+                   population,
+                   description
+            FROM population.{safe_table}
+            WHERE population = :population
             ORDER BY population, persona_id
-        """
+            """
+        )
         self.logger.info(f"Querying population data for {population}")
-        return pd.read_sql(query, self.connection)
+        return pd.read_sql(query, self.connection, params={"population": population})
 
     def check_existing_personality(
         self,
@@ -116,15 +131,23 @@ class Population:
         """
         # Prefer experimental schema for generated personas;
         # allow explicit override.
-        target_schema = schema or get_experimental_schema()
-        query = f"""
+        target_schema = self._validate_identifier(schema or get_experimental_schema())
+        safe_table = self._validate_identifier(new_population_table)
+        query = sqlalchemy.text(
+            f"""
             SELECT ref_personality_id
-            FROM {target_schema}.{new_population_table}
-            WHERE population = '{population}'
-              AND ref_personality_id = '{personality_id}'
-              AND repetitions = {repeated}
-        """
-        existing_ids_df = pd.read_sql_query(query, self.connection)
+            FROM {target_schema}.{safe_table}
+            WHERE population = :population
+              AND ref_personality_id = :personality_id
+              AND repetitions = :repetitions
+            """
+        )
+        params = {
+            "population": population,
+            "personality_id": personality_id,
+            "repetitions": repeated,
+        }
+        existing_ids_df = pd.read_sql_query(query, self.connection, params=params)
         return not existing_ids_df.empty
 
     def save_generated_persona(
@@ -254,17 +277,21 @@ class Population:
             List[int]: List of personality IDs
         """
         # Use unified personas table and configured schema.
-        use_schema = get_target_schema()
-        query = f"""
+        use_schema = self._validate_identifier(get_target_schema())
+        query = sqlalchemy.text(
+            f"""
             SELECT ref_personality_id AS persona_id
             FROM {use_schema}.personas
-            WHERE population = '{population}'
+            WHERE population = :population
             ORDER BY persona_id
-        """
+            """
+        )
 
+        params: Dict[str, Any] = {"population": population}
         if limit:
-            query += f" LIMIT {limit}"
+            query = sqlalchemy.text(str(query) + " LIMIT :limit")
+            params["limit"] = limit
 
-        df = pd.read_sql(query, self.connection)
+        df = pd.read_sql(query, self.connection, params=params)
         # Explicitly cast to List[int] to avoid the Any return type error
         return [int(pid) for pid in df["persona_id"].tolist()]

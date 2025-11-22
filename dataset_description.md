@@ -10,12 +10,12 @@ This dataset contains the complete research data from "The Personality Trap" stu
 
 **Code Repository**: [https://github.com/gregorio-ferreira/the_personality_trap](https://github.com/gregorio-ferreira/the_personality_trap)
 
-**Dataset Size**: ~47MB (PostgreSQL dump, gzipped)  
-**Total Records**: 698,632 across 9 tables + 1 materialized view  
-**Personas Generated**: 82,600 unique personas  
-**Models Tested**: 5 (GPT-3.5, GPT-4o, Claude 3.5 Sonnet, Llama 3.1 70B, Llama 3.2 3B)  
-**Personality Profiles**: 826 unique baseline personalities (EPQR-A)  
-**Experimental Conditions**: Baseline, MaxN (high neuroticism), MaxP (high psychoticism)  
+**Dataset Size**: ~47MB (PostgreSQL dump, gzipped)
+**Total Records**: 698,632 across 9 tables + 1 materialized view
+**Personas Generated**: 82,600 unique personas
+**Models Tested**: 5 (GPT-3.5, GPT-4o, Claude 3.5 Sonnet, Llama 3.1 70B, Llama 3.2 3B)
+**Personality Profiles**: 826 unique baseline personalities (EPQR-A)
+**Experimental Conditions**: Baseline, MaxN (high neuroticism), MaxP (high psychoticism)
 **Backup Location**: `dataset/20251008/` (Complete database backup and CSV exports)
 
 ## Research Context
@@ -341,7 +341,7 @@ The view includes performance indexes on:
 4. **Random Baseline**: 826 randomly generated personality profiles using empirical probability distributions from reference questionnaires to serve as null hypothesis control
 
 ### LLM Persona Generation
-1. **Models Tested**: 
+1. **Models Tested**:
    - OpenAI: GPT-3.5 Turbo, GPT-4o
    - Anthropic: Claude 3.5 Sonnet
    - Meta: Llama 3.1 70B, Llama 3.2 3B
@@ -415,7 +415,7 @@ This dataset enables research in several key areas:
 ### Technical Requirements
 - **Database**: PostgreSQL 14+ recommended (tested with PostgreSQL 16)
 - **Storage**: ~50MB for compressed dataset, ~280MB uncompressed
-- **Analysis Tools**: 
+- **Analysis Tools**:
   - Python 3.12+ with pandas, numpy, scipy, pingouin (see `pyproject.toml` in code repository)
   - R with tidyverse for alternative analysis workflows
   - Jupyter notebooks for interactive exploration (provided in code repository)

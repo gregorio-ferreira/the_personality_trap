@@ -77,8 +77,16 @@ class ConfigManager:
         if self.logger:
             self.logger.debug(f"Loading configuration from {config_path}")
 
-        with open(config_path, encoding="utf-8") as f:
-            loaded = yaml.load(f, Loader=yaml.FullLoader)
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                loaded = yaml.load(f, Loader=yaml.FullLoader)
+        except FileNotFoundError as exc:  # pragma: no cover - user guidance
+            raise FileNotFoundError(
+                f"Configuration file not found at {config_path}.\n"
+                "Create one from the template:\n"
+                "  cp .yaml.example .yaml\n"
+                "or provide values via PERSONAS_* environment variables."
+            ) from exc
 
         if isinstance(loaded, MutableMapping):
             raw: Dict[str, Any] = cast(Dict[str, Any], dict(loaded))

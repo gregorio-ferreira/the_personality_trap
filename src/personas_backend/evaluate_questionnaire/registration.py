@@ -67,7 +67,7 @@ from personas_backend.db.schema_config import get_experimental_schema
 from personas_backend.db.session import get_session
 from personas_backend.models_providers.models_config import get_models_config
 from personas_backend.questionnaire import get_questionnaire_json
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 SYSTEM_ROLE_TEMPLATE = (
     "You are required to adopt and impersonate the personality of the human "
@@ -123,6 +123,18 @@ def _resolve_personality_id(persona: Persona) -> int:
     raise ValueError("Persona is missing both ref_personality_id and id")
 
 
+def _validate_identifier(identifier: str, *, kind: str = "identifier") -> str:
+    """Ensure schema/table identifiers are simple and safe."""
+
+    if (
+        not identifier
+        or not identifier.replace("_", "").isalnum()
+        or not (identifier[0].isalpha() or identifier[0] == "_")
+    ):
+        raise ValueError(f"Invalid {kind}: {identifier}")
+    return identifier
+
+
 SessionFactory = Callable[[], ContextManager[Session]]
 
 
@@ -157,30 +169,27 @@ def fetch_personas(
     # Determine which schema to query
     from personas_backend.db.schema_config import get_experimental_schema
 
-    query_schema = schema or get_experimental_schema()
+    query_schema = _validate_identifier(schema or get_experimental_schema(), kind="schema")
 
     with session_factory() as session:  # type: ignore[misc]
         assert isinstance(session, Session)  # help type checkers
         # Detect if using SQLite (no schema support)
-        is_sqlite = (
-            session.bind is not None and session.bind.dialect.name == "sqlite"
-        )
+        is_sqlite = session.bind is not None and session.bind.dialect.name == "sqlite"
         table_ref = "personas" if is_sqlite else f"{query_schema}.personas"
 
         from sqlalchemy import text as sql_text
 
         # Adjust population filtering for SQLite
         if is_sqlite:
+            # Build dynamic placeholders based on actual number of populations
+            placeholders = ", ".join(f":pop{i+1}" for i in range(len(normalised_populations)))
             raw_query = f"""
                 SELECT * FROM {table_ref}
                 WHERE model = :model
-                AND population IN (:pop1, :pop2, :pop3)
+                AND population IN ({placeholders})
             """
-            # Support up to 3 populations for test purposes
             pop_args = {f"pop{i+1}": p for i, p in enumerate(normalised_populations)}
-            result = session.execute(
-                sql_text(raw_query), {"model": model, **pop_args}
-            )
+            result = session.execute(sql_text(raw_query), {"model": model, **pop_args})
         else:
             raw_query = f"""
                 SELECT * FROM {table_ref}
