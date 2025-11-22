@@ -5,7 +5,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17286313.svg)](https://doi.org/10.5281/zenodo.17286313)
 
-Open-source replication package for **"The Personality Trap: Investigating Demographic Bias in LLM Persona Generation"**, submitted to the ACM Special Issue on Risk and Unintended Harms of Generative AI Systems.
+Open-source replication package for **"The Personality Trap: Investigating Demographic Bias in LLM Persona Generation"**, submitted to the ACM Conference on Fairness, Accountability, and Transparency (ACM FAccT).
 
 ---
 
